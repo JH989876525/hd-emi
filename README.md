@@ -37,9 +37,14 @@ cd hd-emi
 ./play.sh -m scroll                    # scrolling
 ./play.sh -r 3840x2160 -f 30           # other resolution / frame rate
 ./play.sh -k kmssink                   # other sink
+./play.sh -l 10                        # 10 runs of 5 s each, prints PASS/FAIL per run
+./play.sh -l 100 -t 10                 # 100 runs of 10 s each
 ./play.sh -n                           # print the gst-launch command only
 ```
 
+- With `-l RUNS`, each run lasts `-t` seconds (default 5) and ends with `PASS` or `FAIL`
+  (the `gst-launch-1.0` exit status), followed by a summary; the script exits non-zero if any
+  run failed. Without `-l`/`-t` it plays until Ctrl-C, as before.
 - `play.sh` runs `generate.py` automatically if the requested resolution has not been generated yet.
 
 # H Pattern
