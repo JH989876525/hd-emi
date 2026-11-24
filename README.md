@@ -6,10 +6,9 @@
 
 # Overview
 
-`hd-emi` generates pixel-exact EMI "H pattern" images (Quantum Data / LeCroy style: the
-screen tiled edge to edge with the letter "H") for any display resolution.
+`hd-emi` generates pixel-exact EMI "H pattern" images for any resolution.
 
-And also provide GStreamer example for EMI testing.
+And also provide GStreamer examples.
 
 # Requirements
 
