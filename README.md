@@ -1,27 +1,33 @@
-# HDMI EMI H Pattern (GStreamer)
+- [Overview](#overview)
+- [Requirements](#requirements)
+- [Files](#files)
+- [Usage](#usage)
+- [H Pattern](#h-pattern)
 
-EMI "H pattern" (Quantum Data / LeCroy style): the whole screen is tiled edge to edge
-with a bitmap letter "H" (5x7 glyph in an 8x8 cell, no gaps between characters).
+# Overview
 
-| Item | Option |
-|---|---|
-| White H on black / Black H on white | `-p white-on-black` / `-p black-on-white` |
-| Small H (8x8 cell) / Large H (32x32 cell) | `-s small` / `-s large` |
-| Static / Scrolling (horizontal, seamless loop) | `-m static` / `-m scroll` |
+`hd-emi` generates pixel-exact EMI "H pattern" images (Quantum Data / LeCroy style: the
+screen tiled edge to edge with the letter "H") for any display resolution.
 
-## Files
+And also provide GStreamer example for EMI testing.
+
+# Requirements
+
+- `gst-launch-1.0`
+- `Python3` : `numpy`, `Pillow`
+
+# Files
 
 - `generate.py` – generates the pattern images for any resolution into `patterns/<WxH>/`
 - `play.sh` – plays a pattern with `gst-launch-1.0` (default sink: `autovideosink`)
-- `h.py`, `h_pattern.png` – original simple "H grid" image (not the EMI pattern)
+- `patterns/` – pre-generated images for 1280x720, 1920x1080 and 3840x2160
 
-## Requirements
-
-GStreamer 1.x (`gst-launch-1.0`, base plugins), Python 3 with `numpy` and `Pillow`.
-
-## Usage
+# Usage
 
 ```bash
+git clone https://github.com/JH989876525/hd-emi.git
+cd hd-emi
+
 ./generate.py                          # 1920x1080 (default)
 ./generate.py -r 720p 1080p 4k         # presets: 720p 1080p 1440p 4k, or any WxH
 ./generate.py --speed 2                # scroll speed, px/frame (default 1)
@@ -34,28 +40,51 @@ GStreamer 1.x (`gst-launch-1.0`, base plugins), Python 3 with `numpy` and `Pillo
 ./play.sh -n                           # print the gst-launch command only
 ```
 
-`play.sh` runs `generate.py` automatically if the requested resolution has not been generated yet.
+- `play.sh` runs `generate.py` automatically if the requested resolution has not been generated yet.
 
-## Why generate per resolution?
+# H Pattern
 
-The image must be shown **1:1** (one image pixel per display pixel) at the HDMI mode under
-test. If the sink rescales it, the 1-pixel strokes blur and the EMI stress is lost. So pick
-`-r` to match the actual HDMI output mode.
+Reference: Quantum Data / LeCroy EMI H pattern. Required patterns:
 
-`autovideosink` opens a normal window, which is fine for a quick check. For a real EMI run,
-show it fullscreen on the HDMI output (e.g. fullscreen the window on that monitor, or use
-`kmssink` from a TTY) and confirm the mode matches (`xrandr`, or `modetest` on the target).
+1. White H on black background
+2. Black H on white background
+3. Small H / Large H
+4. Static H pattern
+5. Scrolling H pattern
 
-## Layout of `patterns/<WxH>/`
+<details>
+<summary><b>Implementation details</b></summary>
+<br>
 
-```
-<polarity>_<size>_static.png          static frame
-<polarity>_<size>_scroll/000.png ...  one seamless scroll period (8 frames small, 32 large @ 1px/frame),
-                                      looped by multifilesrc
-```
+- **Fill:** the full screen is tiled edge to edge with the character "H", with no gaps
+  between characters and no margins. Partial characters are cut off at the right and
+  bottom edges.
+- **Glyph:** a 5x7 bitmap H (two vertical strokes plus a middle bar) in an 8x8 cell,
+  with 1-pixel-wide strokes (no anti-aliasing, so only pure black and white pixels exist):
 
-## Notes
+  ```
+  X...X
+  X...X
+  X...X
+  XXXXX      cell = 8x8: glyph at column 1..5, row 0..6,
+  X...X      remaining columns/row are inter-character spacing
+  X...X
+  X...X
+  ```
+- **Colors:** pure white (255) and pure black (0) only. Polarity is inverted for
+  black-on-white.
+- **Small H:** the glyph at 1x (8x8 cell).
+- **Large H:** the glyph scaled by an integer factor (default 4x, 32x32 cell,
+  `--large-scale N` to change). Scaling is nearest-neighbor, so edges stay sharp.
+- **Static:** one frame, repeated at the chosen frame rate.
+- **Scrolling:** the pattern moves horizontally by a fixed number of pixels per frame
+  (default 1 px/frame, `--speed N`, `--direction left|right`). One scroll period equals one
+  cell width (8 frames small, 32 frames large at 1 px/frame), so the loop is seamless.
+- **Resolution:** the image is generated at exactly the HDMI output resolution (1:1 pixel
+  mapping, no scaling).
 
-- Glyph/cell sizes are my choice; Quantum Data / LeCroy exact sizes weren't verified. Edit
-  `H_GLYPH`, `CELL_W/H` or `--large-scale` in `generate.py` to match your test spec.
-- Scrolling is horizontal only (`--direction left|right` when generating).
+> The reference name and the five required patterns come from the test spec. The exact
+> glyph and cell sizes above are my own choice; I did not verify the actual Quantum Data /
+> LeCroy character dimensions. Adjust `H_GLYPH`, `CELL_W/H` or `--large-scale` in
+> `generate.py` if your spec defines them.
+</details>
